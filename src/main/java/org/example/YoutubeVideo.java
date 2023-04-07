@@ -8,12 +8,17 @@ public class YoutubeVideo {
     private String uploadDate;
     private String viewCount;
     private String title;
-    public YoutubeVideo(String title, String uploadDate, String viewCount, String videoURL, String thumbnailURL){
+
+    private String handle;
+    private long unixTimeStamp;
+    public YoutubeVideo(String handle, String title, String uploadDate, String viewCount, String videoURL, String thumbnailURL, long unixTimeStamp){
         this.videoURL = videoURL;
         this.thumbnailURL = thumbnailURL;
         this.uploadDate = uploadDate;
         this.viewCount = viewCount;
         this.title = title;
+        this.unixTimeStamp = unixTimeStamp;
+        this.handle = handle;
     }
 
     public String getVideoURL() {
@@ -56,12 +61,28 @@ public class YoutubeVideo {
         this.title = title;
     }
 
+    public long getUnixTimeStamp() {
+        return unixTimeStamp;
+    }
+
+    public void setUnixTimeStamp(long unixTimeStamp) {
+        this.unixTimeStamp = unixTimeStamp;
+    }
+
     public String toStringDelimiterTab(){
         return this.getTitle()+"\t"+this.getUploadDate()+"\t"+this.getViewCount()+"\t"+this.getVideoURL()+"\t"+this.getThumbnailURL()+"\n";
     }
 
+    public String getHandle() {
+        return handle;
+    }
+
+    public void setHandle(String handle) {
+        this.handle = handle;
+    }
+
     @Override
     public String toString(){
-        return this.getTitle()+" "+this.getUploadDate()+" "+this.getViewCount()+" "+this.getVideoURL()+" "+this.getThumbnailURL()+"\n";
+        return this.getTitle()+" "+this.getUploadDate()+" "+this.getViewCount()+" "+this.getVideoURL()+" "+this.getThumbnailURL()+" "+ this.unixTimeStamp+"\n";
     }
 }

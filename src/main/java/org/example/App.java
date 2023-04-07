@@ -14,8 +14,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 public class App
 {
@@ -26,10 +25,19 @@ public class App
         options.addArguments("--disable-notifications");
         options.addArguments("disable-infobars");
 
-        String website = "https://www.youtube.com/@programmersarealsohuman5909/videos";
+        String website = "https://www.youtube.com/@rossmanngroup/videos";
         String handle = website.split("/")[3];
 
-        BufferedWriter bw = new BufferedWriter(new FileWriter(handle+".txt"));
+        Map<String, Long> relativeTimetoUnixTime = new HashMap<>();
+        relativeTimetoUnixTime.put("Sekunden",1000L);
+        relativeTimetoUnixTime.put("Minuten",60000L);
+        relativeTimetoUnixTime.put("Stunden",3600000L);
+        relativeTimetoUnixTime.put("Tagen",86400000L);
+        relativeTimetoUnixTime.put("Wochen",604800000L);
+        relativeTimetoUnixTime.put("Monaten",2629743000L);
+        relativeTimetoUnixTime.put("Jahren",31556926000L);
+
+       // BufferedWriter bw = new BufferedWriter(new FileWriter(handle+".txt"));
 
         WebDriver driver = new ChromeDriver(options);
         WebDriverWait driverWait = new WebDriverWait(driver, Duration.ofSeconds(2000L));
@@ -45,7 +53,7 @@ public class App
 
                 long lastHeight = Long.parseLong(pageManager.getAttribute("scrollHeight"));
 
-                int c = 0;
+                //int c = 0;
                 while(true){
                     new Actions(driver).scrollByAmount(0,(int) lastHeight).perform();
                     new Actions(driver).pause(Duration.ofMillis(500L)).perform();
@@ -56,7 +64,7 @@ public class App
                         break;
                     }
                     lastHeight = newHeight;
-                    //c++;
+                  //  c++;
                 }
 
                 driverWait.until(ExpectedConditions.visibilityOfElementLocated(By.id("contents")));
@@ -71,30 +79,31 @@ public class App
                 String viewCount = null;
                 String title = null;
 
-                List<YoutubeVideo> ytList = new ArrayList<>();
+                List<JSONObject> ytVideo = new ArrayList<>();
 
-                for(int i = 0; i < thumbNail.size(); i++){
+                for(int i = 0; i < thumbNail.size(); i++) {
 
                     title = url.get(i).getDomAttribute("title");
                     thumbUrl = thumbNail.get(i).getDomAttribute("src");
                     videoUrl = url.get(i).getDomAttribute("href");
-                    viewCount = metaData.get(i*2).getText();
-                    uploadDate = metaData.get((2*i)+1).getText();
+                    viewCount = metaData.get(i * 2).getText();
+                    uploadDate = metaData.get((2 * i) + 1).getText();
 
-                    YoutubeVideo v = new YoutubeVideo(title, uploadDate, viewCount, videoUrl, thumbUrl);
-                    ytList.add(v);
-                    bw.write(v.toString());
-                    bw.flush();
+                    long time = System.currentTimeMillis() - getUnixTimeFromRelativeTime(uploadDate, relativeTimetoUnixTime);
+
+                    YoutubeVideo video = new YoutubeVideo(handle, title, uploadDate, viewCount, videoUrl, thumbUrl, time);
+
+                    JSONObject object = new JSONObject(video);
+
+                    ytVideo.add(object);
+                   // bw.write(video.toString());
+                   // bw.flush();
                 }
-
-                JSONObject o = new JSONObject();
-                o.put(handle, ytList);
-                String output = o.toString();
 
                 try {
                     // Create POST Request with JSON-Body
                     HttpClient client = HttpClient.newHttpClient();
-                    HttpRequest request = HttpRequest.newBuilder().uri(URI.create("http://localhost:8000/v1/youtubeVideoList")).header("Content-Type", "application/json; charset=UTF-8").PUT(HttpRequest.BodyPublishers.ofString(output)).build();
+                    HttpRequest request = HttpRequest.newBuilder().uri(URI.create("http://localhost:8000/v1/youtubeVideoList")).header("Content-Type", "application/json; charset=UTF-8").PUT(HttpRequest.BodyPublishers.ofString(ytVideo.toString())).build();
                     HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
                     if(response.statusCode() == 200 || response.statusCode() == 201){
@@ -107,16 +116,36 @@ public class App
                 }
                 catch(Exception e){
                   System.err.println(e);
-                  bw.close();
+                  //bw.close();
                   driver.quit();
                 }
             } catch (Exception e) {
                 System.err.println(e);
-                bw.close();
+                //bw.close();
+                driver.quit();
+            }
+            finally {
+                //bw.close();
                 driver.quit();
             }
 
-            bw.close();
+            //bw.close();
             driver.quit();
+    }
+
+    public static long getUnixTimeFromRelativeTime(String time, Map<String, Long> relativeTimeToUnix){
+
+        String[] a = time.split(" ");
+        long relativeTime = 0L;
+        long multiply = Integer.parseInt(a[1]);
+
+        for(String s : relativeTimeToUnix.keySet()){
+            if(s.contains(a[2])){
+                relativeTime = relativeTimeToUnix.get(s) * multiply;
+                return relativeTime;
+            }
+        }
+
+        return relativeTime;
     }
 }
