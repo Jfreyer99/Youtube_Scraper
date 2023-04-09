@@ -11,7 +11,9 @@ public class YoutubeVideo {
 
     private String handle;
     private long unixTimeStamp;
-    public YoutubeVideo(String handle, String title, String uploadDate, String viewCount, String videoURL, String thumbnailURL, long unixTimeStamp){
+
+    private long viewCountNumber;
+    public YoutubeVideo(String handle, String title, String uploadDate, String viewCount, String videoURL, String thumbnailURL, long unixTimeStamp, long viewCountNumber){
         this.videoURL = videoURL;
         this.thumbnailURL = thumbnailURL;
         this.uploadDate = uploadDate;
@@ -19,6 +21,7 @@ public class YoutubeVideo {
         this.title = title;
         this.unixTimeStamp = unixTimeStamp;
         this.handle = handle;
+        this.viewCountNumber = viewCountNumber;
     }
 
     public String getVideoURL() {
@@ -81,8 +84,16 @@ public class YoutubeVideo {
         this.handle = handle;
     }
 
+    public long getViewCountNumber() {
+        return viewCountNumber;
+    }
+
+    public void setViewCountNumber(long viewCountNumber) {
+        this.viewCountNumber = viewCountNumber;
+    }
+
     @Override
     public String toString(){
-        return this.getTitle()+" "+this.getUploadDate()+" "+this.getViewCount()+" "+this.getVideoURL()+" "+this.getThumbnailURL()+" "+ this.unixTimeStamp+"\n";
+        return this.getTitle()+" "+this.getUploadDate()+" "+this.getViewCount()+" "+this.getVideoURL()+" "+this.getThumbnailURL()+" "+ this.unixTimeStamp+ " " + this.viewCountNumber +"\n";
     }
 }
