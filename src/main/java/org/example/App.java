@@ -1,5 +1,6 @@
 package org.example;
 
+import dev.failsafe.internal.util.Durations;
 import org.json.JSONObject;
 import org.openqa.selenium.*;
 import org.openqa.selenium.chrome.ChromeDriver;
@@ -7,6 +8,7 @@ import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.interactions.Actions;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
+
 
 import java.io.*;
 import java.net.URI;
@@ -19,12 +21,11 @@ import java.util.*;
 public class App
 {
     public static void main( String[] args ) throws IOException, InterruptedException {
+
         System.setProperty("webdriver.http.factory", "jdk-http-client");
 
         ChromeOptions options = new ChromeOptions();
-        options.addArguments("--disable-notifications");
-        options.addArguments("disable-infobars");
-
+        options.addArguments("--headless", "--window-size=4000,4000","--ignore-certificate-errors,","--disable-notifications","--disable-infobars", "--no-sandbox");
 
         Map<String, Long> relativeTimetoUnixTime = new HashMap<>();
         relativeTimetoUnixTime.put("Sekunden",1000L);
@@ -34,9 +35,6 @@ public class App
         relativeTimetoUnixTime.put("Wochen",604800000L);
         relativeTimetoUnixTime.put("Monaten",2629743000L);
         relativeTimetoUnixTime.put("Jahren",31556926000L);
-
-       // BufferedWriter bw = new BufferedWriter(new FileWriter(handle+".txt"));
-
 
         String[] handels = new String[5];
 
@@ -48,11 +46,13 @@ public class App
 
       //  for(String h : handels) {
 
-            String website = "https://www.youtube.com/@thekubzscouts/videos";
+            String website = "https://www.youtube.com/@LinusTechTips/videos";
             String handle = website.split("/")[3];
 
+        BufferedWriter bw = new BufferedWriter(new FileWriter(handle+".txt"));
+
             WebDriver driver = new ChromeDriver(options);
-            WebDriverWait driverWait = new WebDriverWait(driver, Duration.ofSeconds(2000L));
+            WebDriverWait driverWait = new WebDriverWait(driver, Duration.ofSeconds(8L));
 
             driver.get(website);
             try {
@@ -65,29 +65,36 @@ public class App
 
                 long lastHeight = Long.parseLong(pageManager.getAttribute("scrollHeight"));
 
-                //int c = 0;
-                while (true) {
-                    new Actions(driver).scrollByAmount(0, (int) lastHeight).perform();
-                    new Actions(driver).pause(Duration.ofMillis(500L)).perform();
+                int c = 0;
+                while (c < 70) {
+                    new Actions(driver).scrollByAmount(0, 4000).perform();
+                    new Actions(driver).pause(Duration.ofMillis(1000L)).perform();
 
                     long newHeight = Long.parseLong(pageManager.getAttribute("scrollHeight"));
-
                     if (newHeight == lastHeight) {
                         break;
                     }
                     lastHeight = newHeight;
-                    //c++;
+                    c++;
+                    System.out.println("Scroll "+ lastHeight);
                 }
 
                 driverWait.until(ExpectedConditions.visibilityOfElementLocated(By.id("contents")));
 
-                List<WebElement> metaData = driver.findElements(By.cssSelector(".inline-metadata-item.style-scope.ytd-video-meta-block"));
-                List<WebElement> url = driver.findElements(By.id("video-title-link"));
-                List<WebElement> thumbNail = driver.findElements(By.cssSelector("img.yt-core-image"));
+                WebElement contents = driver.findElement(By.id("contents"));
 
-                WebElement[] metaDataArr = metaData.toArray(new WebElement[0]);
-                WebElement[] urlArr = url.toArray(new WebElement[0]);
-                WebElement[] thumbNailArr = thumbNail.toArray(new WebElement[0]);
+//               ArrayList<String> urlList = (ArrayList<String>) contents.findElements(By.id("video-title-link")).stream().map((ele) -> ele.getDomAttribute("title")).collect(Collectors.toList());
+//               ArrayList<String> hrefList = (ArrayList<String>) contents.findElements(By.id("video-title-link")).stream().map((ele) -> ele.getDomAttribute("href")).collect(Collectors.toList());
+//               ArrayList<String> thumbNailList = (ArrayList<String>) contents.findElements(By.className("yt-core-image")).stream().map((ele) -> ele.getDomAttribute("src")).collect(Collectors.toList());
+//               ArrayList<String> metaDataList = (ArrayList<String>) contents.findElements(By.className("inline-metadata-item")).stream().map(WebElement::getText).collect(Collectors.toList());
+
+                 ArrayList<WebElement> urlList = (ArrayList<WebElement>) contents.findElements(By.id("video-title-link"));
+                 ArrayList<WebElement> hrefList = (ArrayList<WebElement>) contents.findElements(By.id("video-title-link"));
+                 ArrayList<WebElement> thumbNailList = (ArrayList<WebElement>) contents.findElements(By.className("yt-core-image"));
+                 ArrayList<WebElement> metaDataList = (ArrayList<WebElement>) contents.findElements(By.className("inline-metadata-item"));
+
+                new Actions(driver).pause(Duration.ofMillis(2000L)).perform();
+
 
                 String thumbUrl = null;
                 String videoUrl = null;
@@ -95,31 +102,32 @@ public class App
                 String viewCount = null;
                 String title = null;
 
-                List<JSONObject> ytVideo = new ArrayList<>();
+                List<JSONObject> ytVideo = new LinkedList<>();
 
-                for (int i = 0; i < thumbNailArr.length; i++) {
+                for (int i = thumbNailList.size()-1; i >= 0; i--) {
 
-                    title = urlArr[i].getDomAttribute("title");
-                    thumbUrl = thumbNailArr[i].getDomAttribute("src");
-                    videoUrl = urlArr[i].getDomAttribute("href");
-                    viewCount = metaDataArr[i * 2].getText();
-                    uploadDate = metaDataArr[(2 * i) + 1].getText();
+                    title = urlList.get(i).getDomAttribute("title");
+                    thumbUrl = thumbNailList.get(i).getDomAttribute("src");
+                    videoUrl = hrefList.get(i).getDomAttribute("href");
+                    viewCount = metaDataList.get(i * 2).getText();
+                    uploadDate = metaDataList.get((2 * i) + 1).getText();
 
                     long time = System.currentTimeMillis() - getUnixTimeFromRelativeTime(uploadDate, relativeTimetoUnixTime);
                     long viewCountN = getViewCountNumberFromViewCountTag(viewCount);
 
-                    YoutubeVideo video = new YoutubeVideo(handle, title, uploadDate, viewCount, videoUrl, thumbUrl, time, viewCountN);
+                   YoutubeVideo video = new YoutubeVideo(handle, title, uploadDate, viewCount, videoUrl, thumbUrl, time, viewCountN);
 
-                    JSONObject object = new JSONObject(video);
+                    //JSONObject object = new JSONObject(video);
 
-                    ytVideo.add(object);
-                    // bw.write(video.toString());
-                    // bw.flush();
+                    //ytVideo.add(object);
+                    System.out.println(video);
+                    bw.write(video.toString());
+                    bw.flush();
                 }
 
                 try {
-                    // Create POST Request with JSON-Body
-                    HttpClient client = HttpClient.newHttpClient();
+                    //Create POST Request with JSON-Body
+                   HttpClient client = HttpClient.newHttpClient();
                     HttpRequest request = HttpRequest.newBuilder().uri(URI.create("http://localhost:8000/v1/youtubeVideoList")).header("Content-Type", "application/json; charset=UTF-8").PUT(HttpRequest.BodyPublishers.ofString(ytVideo.toString())).build();
                     HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
@@ -131,19 +139,19 @@ public class App
                     }
                 } catch (Exception e) {
                     System.err.println(e);
-                    //bw.close();
+                    bw.close();
                     driver.quit();
                 }
             } catch (Exception e) {
                 System.err.println(e);
-                //bw.close();
+                bw.close();
                 driver.quit();
             } finally {
-                //bw.close();
+                bw.close();
                 driver.quit();
             }
 
-            //bw.close();
+            bw.close();
             driver.quit();
         }
 
@@ -174,6 +182,8 @@ public class App
             count = count.replaceAll("\\.", "");
             return Long.parseLong(count);
         }else if(count.contains(",")){
+
+            //TODO FIX 8 Mio. => 8 Aufrufe ///// Maybe write a test for it //// Does not work for > 100 Mio
             count = count.replaceAll(",", "");
             switch(multiplier){
                 case "Mio.":
@@ -191,7 +201,6 @@ public class App
         }catch(NumberFormatException ex){
             System.out.println(ex);
         }
-
         return result;
     }
 }
